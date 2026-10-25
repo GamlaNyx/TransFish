@@ -104,8 +104,15 @@ npm run dev          # 仅 Vite
 npm run build        # TypeScript 检查 + 前端构建
 npm run app:dev      # Tauri 开发
 npm run app:build    # 打包 NSIS 安装包
+npm run check:secrets # 扫描仓库里的密钥痕迹（提交前建议跑一次）
 cargo test           # src-tauri 下的 Rust 单元测试
 ```
+
+## 密钥与版本库
+
+AccessKey 只写入 `%APPDATA%\com.transfish.app\settings.json`，该文件位于仓库之外，且
+`.gitignore` 与 `scripts/check_secrets.py` 会拦截 `settings*.json`、`AccessKey*.txt`
+以及疑似 AK/SK 的内容。不要把真实密钥、包含密钥的截图或配置复制进仓库。
 
 ## 已知限制
 

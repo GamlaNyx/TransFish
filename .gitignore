@@ -12,6 +12,13 @@ src-tauri/gen/
 .env.*
 *.local
 settings.json
+settings*.json
+AccessKey*.txt
+*.pem
+*.key
+*.pfx
+*.p12
+*.secret
 .tauri/
 
 # editor / os

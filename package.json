@@ -11,6 +11,7 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
+    "check:secrets": "python scripts/check_secrets.py",
     "icon": "tauri icon"
   },
   "dependencies": {
