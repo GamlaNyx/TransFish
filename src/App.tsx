@@ -22,6 +22,7 @@ const DEMO_SETTINGS: SettingsView = {
   clipboardPrefill: true,
   quickTranslate: true,
   autostart: false,
+  alwaysOnTop: true,
   hasCredentials: false,
   accessKeyHint: "",
 };
@@ -142,13 +143,9 @@ export default function App() {
 
       const clipboard = (payload?.clipboard ?? "").trim();
       setText(clipboard);
-      if (clipboard) {
-        void runTranslate(clipboard);
-      } else {
-        window.setTimeout(() => inputRef.current?.focus(), 40);
-      }
+      window.setTimeout(() => inputRef.current?.focus(), 40);
     },
-    [runTranslate],
+    [],
   );
   summonRef.current = handleSummon;
 
@@ -337,6 +334,20 @@ export default function App() {
     [showToast],
   );
 
+  const togglePin = useCallback(async () => {
+    if (!boot) {
+      return;
+    }
+    const next = !boot.settings.alwaysOnTop;
+    try {
+      const settings = await backend.setAlwaysOnTop(next);
+      setBoot((current) => (current ? { ...current, settings } : current));
+      showToast(next ? "窗口已置顶" : "已取消置顶", 1200);
+    } catch (caught) {
+      showToast(toApiError(caught).message);
+    }
+  }, [boot, showToast]);
+
   if (fatal) {
     return (
       <div className="appear">
@@ -365,6 +376,7 @@ export default function App() {
             version={boot.version}
             onClose={() => setView("translate")}
             onSaved={handleSaved}
+            onTogglePin={() => void togglePin()}
           />
         ) : (
           <Translator
@@ -375,6 +387,7 @@ export default function App() {
             loading={loading}
             error={error}
             copied={copied}
+            pinned={active.alwaysOnTop}
             hotkey={active.hotkey}
             hotkeyError={boot.hotkeyError}
             inputRef={inputRef}
@@ -387,6 +400,7 @@ export default function App() {
             onSubmit={submit}
             onCopy={() => void copyResult()}
             onRetry={() => void runTranslate()}
+            onTogglePin={() => void togglePin()}
             onOpenSettings={() => setView("settings")}
           />
         )}

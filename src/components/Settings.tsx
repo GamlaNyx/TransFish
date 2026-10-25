@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { AlertIcon, ArrowLeftIcon, CheckIcon, SealMark } from "./Icons";
+import { AlertIcon, ArrowLeftIcon, CheckIcon, PinIcon, SealMark } from "./Icons";
 import { TARGET_OPTIONS, langName } from "../lib/lang";
 import { backend, toApiError, type SettingsPatch, type SettingsView } from "../lib/api";
 
@@ -8,6 +8,7 @@ interface SettingsProps {
   version: string;
   onClose: () => void;
   onSaved: (settings: SettingsView) => void;
+  onTogglePin: () => void;
 }
 
 type TestState = { ok: boolean; message: string } | null;
@@ -48,7 +49,13 @@ function acceleratorKey(event: ReactKeyboardEvent<HTMLInputElement>): string | n
   return map[code] ?? null;
 }
 
-export default function Settings({ settings, version, onClose, onSaved }: SettingsProps) {
+export default function Settings({
+  settings,
+  version,
+  onClose,
+  onSaved,
+  onTogglePin,
+}: SettingsProps) {
   const [accessKeyId, setAccessKeyId] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [showSecret, setShowSecret] = useState(false);
@@ -72,7 +79,14 @@ export default function Settings({ settings, version, onClose, onSaved }: Settin
     setClipboardPrefill(settings.clipboardPrefill);
     setQuickTranslate(settings.quickTranslate);
     setAutostart(settings.autostart);
-  }, [settings]);
+  }, [
+    settings.hotkey,
+    settings.targetMode,
+    settings.hideOnBlur,
+    settings.clipboardPrefill,
+    settings.quickTranslate,
+    settings.autostart,
+  ]);
 
   const save = async () => {
     if (saving) {
@@ -189,6 +203,15 @@ export default function Settings({ settings, version, onClose, onSaved }: Settin
           <span className="version">v{version}</span>
         </div>
         <div className="header-right">
+          <button
+            className={`icon-btn pin-btn${settings.alwaysOnTop ? " active" : ""}`}
+            onClick={onTogglePin}
+            title={settings.alwaysOnTop ? "取消置顶" : "窗口置顶"}
+            aria-label={settings.alwaysOnTop ? "取消置顶" : "窗口置顶"}
+            aria-pressed={settings.alwaysOnTop}
+          >
+            <PinIcon active={settings.alwaysOnTop} />
+          </button>
           <span data-tauri-drag-region>
             <SealMark size={19} />
           </span>
@@ -326,7 +349,7 @@ export default function Settings({ settings, version, onClose, onSaved }: Settin
           />
           <span className="check-body">
             <span className="check-title">用剪贴板预填</span>
-            <span className="check-desc">呼出时若剪贴板有新内容，直接填入并翻译。</span>
+            <span className="check-desc">呼出时若剪贴板有新内容，直接填入输入框，按 Enter 翻译。</span>
           </span>
         </label>
 

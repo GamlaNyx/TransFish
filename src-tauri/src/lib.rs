@@ -18,6 +18,10 @@ pub struct AppState {
     pub quitting: std::sync::atomic::AtomicBool,
     pub last_summon: std::sync::Mutex<Option<std::time::Instant>>,
     pub notice: std::sync::Mutex<Option<String>>,
+    /// Position the user dragged the slip to, in physical pixels.
+    pub window_position: std::sync::Mutex<Option<[i32; 2]>>,
+    pub last_place: std::sync::Mutex<Option<std::time::Instant>>,
+    pub position_seq: std::sync::atomic::AtomicU64,
 }
 
 #[derive(Serialize)]
@@ -159,6 +163,28 @@ fn valid_language(code: &str) -> bool {
 }
 
 #[tauri::command]
+fn set_always_on_top(app: AppHandle, enabled: bool) -> Result<SettingsView, ApiError> {
+    let Some(window) = app.get_webview_window(window::MAIN) else {
+        return Err(ApiError::new("window", "找不到翻译窗口。", false));
+    };
+    window
+        .set_always_on_top(enabled)
+        .map_err(|e| ApiError::new("window", format!("切换置顶失败：{e}"), false))?;
+
+    let state = app.state::<AppState>();
+    let mut settings = state
+        .settings
+        .lock()
+        .map(|value| value.clone())
+        .unwrap_or_default();
+    settings.always_on_top = enabled;
+    settings::save(&app, &settings).map_err(|message| ApiError::new("io", message, false))?;
+    *state.settings.lock().unwrap() = settings.clone();
+    let _ = tray::refresh(&app);
+    Ok(settings.view())
+}
+
+#[tauri::command]
 fn copy_text(app: AppHandle, text: String) -> Result<(), String> {
     use tauri_plugin_clipboard_manager::ClipboardExt;
     app.clipboard()
@@ -189,6 +215,7 @@ fn set_window_height(app: AppHandle, height: f64) -> Result<(), String> {
         let position = window.outer_position().unwrap_or_default();
         let max_y = area.position.y + area.size.height as i32 - (height as i32) - 8;
         if position.y > max_y {
+            window::mark_placement(&app);
             let _ = window.set_position(tauri::PhysicalPosition::new(
                 position.x,
                 max_y.max(area.position.y + 8),
@@ -288,7 +315,14 @@ pub fn run() {
                 quitting: std::sync::atomic::AtomicBool::new(false),
                 last_summon: std::sync::Mutex::new(None),
                 notice: std::sync::Mutex::new(hotkey_note),
+                window_position: std::sync::Mutex::new(settings.window_position),
+                last_place: std::sync::Mutex::new(None),
+                position_seq: std::sync::atomic::AtomicU64::new(0),
             });
+
+            if let Some(window) = app.get_webview_window(window::MAIN) {
+                let _ = window.set_always_on_top(settings.always_on_top);
+            }
 
             tray::create(&handle)?;
 
@@ -322,6 +356,11 @@ pub fn run() {
                 api.prevent_close();
                 let _ = window.hide();
             }
+            WindowEvent::Moved(position) => {
+                if window.label() == window::MAIN {
+                    window::remember_position(window.app_handle(), [position.x, position.y]);
+                }
+            }
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
@@ -329,6 +368,7 @@ pub fn run() {
             translate,
             test_credentials,
             save_settings,
+            set_always_on_top,
             copy_text,
             set_window_height,
             hide_window,
@@ -345,6 +385,8 @@ pub fn run() {
                     .load(std::sync::atomic::Ordering::SeqCst)
                 {
                     api.prevent_exit();
+                } else {
+                    window::persist_position(app);
                 }
             }
         });

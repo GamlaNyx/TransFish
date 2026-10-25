@@ -1,8 +1,14 @@
 use serde::Serialize;
+use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 pub const MAIN: &str = "main";
+
+/// Programmatic moves (summon, height clamp, reset) must not be mistaken for a
+/// user drag. Ignore `Moved` events for a short while after we place the window.
+const PLACE_GRACE: Duration = Duration::from_millis(700);
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,6 +76,50 @@ fn place(window: &WebviewWindow) {
         .outer_size()
         .unwrap_or_else(|_| PhysicalSize::new(480, 300));
 
+    // Respect where the user last dragged the slip to, as long as it is still
+    // reachable on a connected monitor.
+    if let Some(position) = saved_position(&app) {
+        if position_is_usable(&app, position, size) {
+            mark_placement(&app);
+            let _ = window.set_position(PhysicalPosition::new(position[0], position[1]));
+            return;
+        }
+    }
+
+    place_top_center(&app, window, size);
+}
+
+fn saved_position(app: &AppHandle) -> Option<[i32; 2]> {
+    app.state::<crate::AppState>()
+        .window_position
+        .lock()
+        .ok()
+        .and_then(|position| *position)
+}
+
+fn position_is_usable(app: &AppHandle, position: [i32; 2], size: PhysicalSize<u32>) -> bool {
+    let [x, y] = position;
+    // Probe a point near the title bar rather than the origin, so a partially
+    // off-screen window still resolves to the monitor it mostly lives on.
+    let Some(monitor) = app
+        .monitor_from_point(x as f64 + 40.0, y as f64 + 16.0)
+        .ok()
+        .flatten()
+    else {
+        return false;
+    };
+    let area = monitor.work_area();
+    let left = area.position.x;
+    let top = area.position.y;
+    let right = left + area.size.width as i32;
+    let bottom = top + area.size.height as i32;
+    let width = size.width as i32;
+    let height = size.height as i32;
+    // Keep at least the grab area (120x40) of the slip inside the work area.
+    x + width > left + 120 && x < right - 120 && y + height > top + 40 && y < bottom - 40
+}
+
+fn place_top_center(app: &AppHandle, window: &WebviewWindow, size: PhysicalSize<u32>) {
     let monitor = app
         .cursor_position()
         .ok()
@@ -87,7 +137,132 @@ fn place(window: &WebviewWindow) {
     let max_y = area.position.y + area.size.height as i32 - size.height as i32 - 8;
     let y = centered_y.min(max_y).max(area.position.y + 8);
 
+    mark_placement(app);
     let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
+/// Remember the position of a programmatic move so the next `Moved` event is
+/// not persisted as a user drag.
+pub fn mark_placement(app: &AppHandle) {
+    if let Ok(mut last) = app.state::<crate::AppState>().last_place.lock() {
+        *last = Some(Instant::now());
+    }
+}
+
+/// Called from the window `Moved` event. Drags are debounced before hitting disk.
+pub fn remember_position(app: &AppHandle, position: [i32; 2]) {
+    let visible = app
+        .get_webview_window(MAIN)
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(false);
+    if !visible {
+        return;
+    }
+
+    let state = app.state::<crate::AppState>();
+    let recently_placed = state
+        .last_place
+        .lock()
+        .ok()
+        .and_then(|last| *last)
+        .map(|at| at.elapsed() < PLACE_GRACE)
+        .unwrap_or(false);
+    if recently_placed {
+        return;
+    }
+
+    {
+        let Ok(mut current) = state.window_position.lock() else {
+            return;
+        };
+        if *current == Some(position) {
+            return;
+        }
+        *current = Some(position);
+    }
+
+    let seq = state.position_seq.fetch_add(1, Ordering::SeqCst) + 1;
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(650));
+        let state = handle.state::<crate::AppState>();
+        if state.position_seq.load(Ordering::SeqCst) != seq {
+            return;
+        }
+        let Some(position) = state
+            .window_position
+            .lock()
+            .ok()
+            .and_then(|value| *value)
+        else {
+            return;
+        };
+        let Ok(mut settings) = state.settings.lock().map(|value| value.clone()) else {
+            return;
+        };
+        if settings.window_position == Some(position) {
+            return;
+        }
+        settings.window_position = Some(position);
+        if crate::settings::save(&handle, &settings).is_ok() {
+            if let Ok(mut current) = state.settings.lock() {
+                *current = settings;
+            }
+        }
+    });
+}
+
+/// Clear the remembered drag position so the next summon returns to the
+/// top-center of the monitor under the cursor.
+pub fn reset_position(app: &AppHandle) {
+    let state = app.state::<crate::AppState>();
+    state.position_seq.fetch_add(1, Ordering::SeqCst);
+    if let Ok(mut current) = state.window_position.lock() {
+        *current = None;
+    }
+    let cloned = state.settings.lock().map(|value| value.clone());
+    if let Ok(mut settings) = cloned {
+        if settings.window_position.take().is_some() {
+            let _ = crate::settings::save(app, &settings);
+            if let Ok(mut current) = state.settings.lock() {
+                *current = settings;
+            }
+        }
+    }
+
+    if let Some(window) = app.get_webview_window(MAIN) {
+        if window.is_visible().unwrap_or(false) {
+            let size = window
+                .outer_size()
+                .unwrap_or_else(|_| PhysicalSize::new(480, 300));
+            place_top_center(app, &window, size);
+        }
+    }
+}
+
+/// Flush a pending drag position synchronously, used when quitting.
+pub fn persist_position(app: &AppHandle) {
+    let state = app.state::<crate::AppState>();
+    let Some(position) = state
+        .window_position
+        .lock()
+        .ok()
+        .and_then(|value| *value)
+    else {
+        return;
+    };
+    let cloned = state.settings.lock().map(|value| value.clone());
+    if let Ok(mut settings) = cloned {
+        if settings.window_position == Some(position) {
+            return;
+        }
+        settings.window_position = Some(position);
+        if crate::settings::save(app, &settings).is_ok() {
+            if let Ok(mut current) = state.settings.lock() {
+                *current = settings;
+            }
+        }
+    }
 }
 
 pub fn register_hotkey(app: &AppHandle, accelerator: &str) -> Result<(), String> {

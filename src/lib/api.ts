@@ -8,6 +8,7 @@ export interface SettingsView {
   clipboardPrefill: boolean;
   quickTranslate: boolean;
   autostart: boolean;
+  alwaysOnTop: boolean;
   hasCredentials: boolean;
   accessKeyHint: string;
 }
@@ -54,6 +55,7 @@ export interface SettingsPatch {
   clipboardPrefill?: boolean;
   quickTranslate?: boolean;
   autostart?: boolean;
+  alwaysOnTop?: boolean;
 }
 
 export function isTauri(): boolean {
@@ -87,6 +89,8 @@ export const backend = {
     }),
   saveSettings: (patch: SettingsPatch) =>
     invoke<SettingsView>("save_settings", { patch }),
+  setAlwaysOnTop: (enabled: boolean) =>
+    invoke<SettingsView>("set_always_on_top", { enabled }),
   copyText: (text: string) => invoke<void>("copy_text", { text }),
   setWindowHeight: (height: number) =>
     invoke<void>("set_window_height", { height }),

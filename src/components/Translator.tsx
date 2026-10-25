@@ -1,5 +1,5 @@
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from "react";
-import { AlertIcon, CopyIcon, CheckIcon, GearIcon, SealMark } from "./Icons";
+import { AlertIcon, CopyIcon, CheckIcon, GearIcon, GripIcon, PinIcon, SealMark } from "./Icons";
 import { formatLatency, langName, shortLang } from "../lib/lang";
 import type { ApiError, SettingsView, Translation } from "../lib/api";
 
@@ -11,6 +11,7 @@ interface TranslatorProps {
   loading: boolean;
   error: ApiError | null;
   copied: boolean;
+  pinned: boolean;
   hotkey: string;
   hotkeyError?: string | null;
   inputRef: RefObject<HTMLTextAreaElement | null>;
@@ -19,6 +20,7 @@ interface TranslatorProps {
   onSubmit: () => void;
   onCopy: () => void;
   onRetry: () => void;
+  onTogglePin: () => void;
   onOpenSettings: () => void;
 }
 
@@ -28,7 +30,7 @@ function Direction({ settings, result }: { settings: SettingsView | null; result
       <>
         <span>{shortLang(result.source)}</span>
         <span className="arrow">→</span>
-        <span>{langName(result.target)}</span>
+        <span>{shortLang(result.target)}</span>
       </>
     );
   }
@@ -37,7 +39,7 @@ function Direction({ settings, result }: { settings: SettingsView | null; result
     <>
       <span>自动检测</span>
       <span className="arrow">→</span>
-      <span>{mode === "auto" ? "中 / EN" : langName(mode)}</span>
+      <span>{mode === "auto" ? "中 / EN" : shortLang(mode)}</span>
     </>
   );
 }
@@ -50,6 +52,7 @@ export default function Translator({
   loading,
   error,
   copied,
+  pinned,
   hotkey,
   hotkeyError,
   inputRef,
@@ -58,6 +61,7 @@ export default function Translator({
   onSubmit,
   onCopy,
   onRetry,
+  onTogglePin,
   onOpenSettings,
 }: TranslatorProps) {
   const onboarding = Boolean(settings && !settings.hasCredentials && !result && !error);
@@ -78,6 +82,9 @@ export default function Translator({
   return (
     <>
       <header className="slip-header" data-tauri-drag-region>
+        <span className="drag-handle" data-tauri-drag-region title="拖动窗口">
+          <GripIcon />
+        </span>
         <span data-tauri-drag-region>
           <SealMark />
         </span>
@@ -89,6 +96,15 @@ export default function Translator({
           <span className="direction" aria-live="polite">
             <Direction settings={settings} result={result} />
           </span>
+          <button
+            className={`icon-btn pin-btn${pinned ? " active" : ""}`}
+            onClick={onTogglePin}
+            title={pinned ? "取消置顶" : "窗口置顶"}
+            aria-label={pinned ? "取消置顶" : "窗口置顶"}
+            aria-pressed={pinned}
+          >
+            <PinIcon active={pinned} />
+          </button>
           <button className="icon-btn" onClick={onOpenSettings} title="设置 (Ctrl+,)" aria-label="设置">
             <GearIcon />
           </button>

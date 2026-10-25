@@ -139,6 +139,24 @@ select:focus-visible {
   padding: 10px 11px 9px 13px;
   border-bottom: 1px solid var(--rule-soft);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0));
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 9px;
+  height: 24px;
+  margin: 0 0 0 -2px;
+  color: var(--ink-faint);
+  opacity: 0.55;
+  transition: opacity 140ms var(--ease);
+}
+
+.drag-handle:hover {
+  opacity: 0.95;
 }
 
 .brand {
@@ -200,6 +218,7 @@ select:focus-visible {
   height: 26px;
   border-radius: 7px;
   color: var(--ink-muted);
+  cursor: pointer;
   transition: background 140ms var(--ease), color 140ms var(--ease);
 }
 
@@ -210,6 +229,16 @@ select:focus-visible {
 
 .icon-btn:active {
   background: rgba(27, 25, 21, 0.1);
+}
+
+.pin-btn.active {
+  color: var(--vermilion);
+  background: rgba(178, 58, 42, 0.08);
+}
+
+.pin-btn.active:hover {
+  color: var(--vermilion-deep);
+  background: rgba(178, 58, 42, 0.14);
 }
 
 /* content --------------------------------------------------------------- */

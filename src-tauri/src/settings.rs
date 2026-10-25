@@ -16,6 +16,9 @@ pub struct Settings {
     pub clipboard_prefill: bool,
     pub quick_translate: bool,
     pub autostart: bool,
+    pub always_on_top: bool,
+    /// Last window position the user dragged to, in physical pixels.
+    pub window_position: Option<[i32; 2]>,
 }
 
 impl Default for Settings {
@@ -29,6 +32,8 @@ impl Default for Settings {
             clipboard_prefill: true,
             quick_translate: true,
             autostart: false,
+            always_on_top: true,
+            window_position: None,
         }
     }
 }
@@ -70,6 +75,7 @@ impl Settings {
             clipboard_prefill: self.clipboard_prefill,
             quick_translate: self.quick_translate,
             autostart: self.autostart,
+            always_on_top: self.always_on_top,
             has_credentials: self.has_credentials(),
             access_key_hint: hint(&self.access_key_id),
         }
@@ -85,6 +91,7 @@ pub struct SettingsView {
     pub clipboard_prefill: bool,
     pub quick_translate: bool,
     pub autostart: bool,
+    pub always_on_top: bool,
     pub has_credentials: bool,
     pub access_key_hint: String,
 }
@@ -114,6 +121,7 @@ pub struct SettingsPatch {
     pub clipboard_prefill: Option<bool>,
     pub quick_translate: Option<bool>,
     pub autostart: Option<bool>,
+    pub always_on_top: Option<bool>,
 }
 
 impl Settings {
@@ -143,6 +151,9 @@ impl Settings {
         }
         if let Some(v) = patch.autostart {
             self.autostart = v;
+        }
+        if let Some(v) = patch.always_on_top {
+            self.always_on_top = v;
         }
     }
 }
