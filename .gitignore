@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# local secrets / runtime state
+.env
+.env.*
+*.local
+settings.json
+.tauri/
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# screenshots / scratch
+.shots/
+
+# logs
+*.log
+npm-debug.log*
