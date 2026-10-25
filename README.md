@@ -114,6 +114,12 @@ AccessKey 只写入 `%APPDATA%\com.transfish.app\settings.json`，该文件位�
 `.gitignore` 与 `scripts/check_secrets.py` 会拦截 `settings*.json`、`AccessKey*.txt`
 以及疑似 AK/SK 的内容。不要把真实密钥、包含密钥的截图或配置复制进仓库。
 
+可在本地安装提交前检查（钩子不随仓库分发，需要每个克隆手动装一次）：
+
+```bash
+cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
 ## 已知限制
 
 - 仅面向 Windows；macOS / Linux 未验证；
