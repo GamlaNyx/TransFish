@@ -10,6 +10,57 @@ pub const MAIN: &str = "main";
 /// user drag. Ignore `Moved` events for a short while after we place the window.
 const PLACE_GRACE: Duration = Duration::from_millis(700);
 
+/// Windows reports a focus loss when the native title-bar move loop starts or
+/// ends. Treat blur shortly after a user move as part of the drag, not as
+/// "the user clicked another app".
+const DRAG_BLUR_GRACE: Duration = Duration::from_millis(1200);
+
+/// True while the left mouse button is held down anywhere on the desktop.
+#[cfg(target_os = "windows")]
+pub fn primary_button_down() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
+    let state = unsafe { GetAsyncKeyState(VK_LBUTTON as i32) };
+    (state as u16 & 0x8000) != 0
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn primary_button_down() -> bool {
+    false
+}
+
+/// Blur that must not hide the slip: the drag is still in progress, or it just
+/// finished and Windows is still settling focus.
+pub fn blur_is_benign(app: &AppHandle, window: &WebviewWindow) -> bool {
+    let dragged = app
+        .state::<crate::AppState>()
+        .last_drag
+        .lock()
+        .ok()
+        .and_then(|value| *value)
+        .map(|at| at.elapsed() < DRAG_BLUR_GRACE)
+        .unwrap_or(false);
+    if dragged {
+        return true;
+    }
+    // A held button only means "drag" while the pointer is still over the slip.
+    // Clicking and holding another window must still hide it.
+    primary_button_down() && cursor_inside(app, window)
+}
+
+fn cursor_inside(app: &AppHandle, window: &WebviewWindow) -> bool {
+    let (Ok(cursor), Ok(position), Ok(size)) = (
+        app.cursor_position(),
+        window.outer_position(),
+        window.outer_size(),
+    ) else {
+        return false;
+    };
+    cursor.x >= position.x as f64
+        && cursor.y >= position.y as f64
+        && cursor.x < (position.x + size.width as i32) as f64
+        && cursor.y < (position.y + size.height as i32) as f64
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SummonPayload {
@@ -171,6 +222,12 @@ pub fn remember_position(app: &AppHandle, position: [i32; 2]) {
         return;
     }
 
+    // This is a real user move: remember when it happened so the focus loss
+    // triggered by the native move loop cannot hide the window mid-drag.
+    if let Ok(mut last) = state.last_drag.lock() {
+        *last = Some(Instant::now());
+    }
+
     {
         let Ok(mut current) = state.window_position.lock() else {
             return;
@@ -189,12 +246,10 @@ pub fn remember_position(app: &AppHandle, position: [i32; 2]) {
         if state.position_seq.load(Ordering::SeqCst) != seq {
             return;
         }
-        let Some(position) = state
-            .window_position
-            .lock()
-            .ok()
-            .and_then(|value| *value)
-        else {
+        let Some(position) = state.window_position.lock().ok().and_then(|value| *value) else {
+            return;
+        };
+        let Ok(_write) = state.settings_write.lock() else {
             return;
         };
         let Ok(mut settings) = state.settings.lock().map(|value| value.clone()) else {
@@ -216,6 +271,9 @@ pub fn remember_position(app: &AppHandle, position: [i32; 2]) {
 /// top-center of the monitor under the cursor.
 pub fn reset_position(app: &AppHandle) {
     let state = app.state::<crate::AppState>();
+    let Ok(_write) = state.settings_write.lock() else {
+        return;
+    };
     state.position_seq.fetch_add(1, Ordering::SeqCst);
     if let Ok(mut current) = state.window_position.lock() {
         *current = None;
@@ -243,12 +301,10 @@ pub fn reset_position(app: &AppHandle) {
 /// Flush a pending drag position synchronously, used when quitting.
 pub fn persist_position(app: &AppHandle) {
     let state = app.state::<crate::AppState>();
-    let Some(position) = state
-        .window_position
-        .lock()
-        .ok()
-        .and_then(|value| *value)
-    else {
+    let Some(position) = state.window_position.lock().ok().and_then(|value| *value) else {
+        return;
+    };
+    let Ok(_write) = state.settings_write.lock() else {
         return;
     };
     let cloned = state.settings.lock().map(|value| value.clone());

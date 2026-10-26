@@ -126,6 +126,7 @@ fn handle_menu(app: &AppHandle, event: MenuEvent) {
 
 fn toggle_autostart(app: &AppHandle) {
     let state = app.state::<crate::AppState>();
+    let _write = state.settings_write.lock().ok();
     let mut settings = match state.settings.lock() {
         Ok(guard) => guard.clone(),
         Err(_) => return,
@@ -148,6 +149,7 @@ fn toggle_autostart(app: &AppHandle) {
 
 fn toggle_always_on_top(app: &AppHandle) {
     let state = app.state::<crate::AppState>();
+    let _write = state.settings_write.lock().ok();
     let mut settings = match state.settings.lock() {
         Ok(guard) => guard.clone(),
         Err(_) => return,

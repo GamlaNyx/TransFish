@@ -4504,7 +4504,7 @@ dependencies = [
 
 [[package]]
 name = "transfish"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "hex",
@@ -4520,6 +4520,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-single-instance",
  "thiserror 2.0.21",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

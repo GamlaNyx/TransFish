@@ -21,6 +21,10 @@ pub struct AppState {
     /// Position the user dragged the slip to, in physical pixels.
     pub window_position: std::sync::Mutex<Option<[i32; 2]>>,
     pub last_place: std::sync::Mutex<Option<std::time::Instant>>,
+    /// When the user last moved the window by hand; suppresses drag-induced blur.
+    pub last_drag: std::sync::Mutex<Option<std::time::Instant>>,
+    /// Serializes read-modify-write cycles on the settings file.
+    pub settings_write: std::sync::Mutex<()>,
     pub position_seq: std::sync::atomic::AtomicU64,
 }
 
@@ -126,6 +130,7 @@ async fn test_credentials(
 #[tauri::command]
 fn save_settings(app: AppHandle, patch: SettingsPatch) -> Result<SettingsView, ApiError> {
     let state = app.state::<AppState>();
+    let _write = state.settings_write.lock().ok();
     let previous = state.settings.lock().map(|s| s.clone()).unwrap_or_default();
     let mut next = previous.clone();
     next.apply(patch);
@@ -172,6 +177,7 @@ fn set_always_on_top(app: AppHandle, enabled: bool) -> Result<SettingsView, ApiE
         .map_err(|e| ApiError::new("window", format!("切换置顶失败：{e}"), false))?;
 
     let state = app.state::<AppState>();
+    let _write = state.settings_write.lock().ok();
     let mut settings = state
         .settings
         .lock()
@@ -317,6 +323,8 @@ pub fn run() {
                 notice: std::sync::Mutex::new(hotkey_note),
                 window_position: std::sync::Mutex::new(settings.window_position),
                 last_place: std::sync::Mutex::new(None),
+                last_drag: std::sync::Mutex::new(None),
+                settings_write: std::sync::Mutex::new(()),
                 position_seq: std::sync::atomic::AtomicU64::new(0),
             });
 
@@ -330,27 +338,50 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             WindowEvent::Focused(false) => {
-                let app = window.app_handle();
-                let state = app.state::<AppState>();
-                let graceful = state
-                    .last_summon
-                    .lock()
-                    .ok()
-                    .and_then(|value| *value)
-                    .map(|at| at.elapsed() < std::time::Duration::from_millis(350))
-                    .unwrap_or(false);
-                if graceful {
+                if window.label() != window::MAIN {
                     return;
                 }
-                let hide = state
-                    .settings
-                    .lock()
-                    .map(|s| s.hide_on_blur)
-                    .unwrap_or(true);
-                drop(state);
-                if hide {
-                    let _ = window.hide();
-                }
+                // Windows can report a focus loss while the native title-bar move
+                // loop is active, which used to hide the window the moment the
+                // user started dragging it. Re-check after a short settle period
+                // and ignore blur that belongs to a drag.
+                let app = window.app_handle().clone();
+                let target = window.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(220));
+                    if !target.is_visible().unwrap_or(false) {
+                        return;
+                    }
+                    if target.is_focused().unwrap_or(false) {
+                        return;
+                    }
+                    let Some(webview) = app.get_webview_window(window::MAIN) else {
+                        return;
+                    };
+                    if window::blur_is_benign(&app, &webview) {
+                        return;
+                    }
+                    let state = app.state::<AppState>();
+                    let graceful = state
+                        .last_summon
+                        .lock()
+                        .ok()
+                        .and_then(|value| *value)
+                        .map(|at| at.elapsed() < std::time::Duration::from_millis(350))
+                        .unwrap_or(false);
+                    if graceful {
+                        return;
+                    }
+                    let hide = state
+                        .settings
+                        .lock()
+                        .map(|s| s.hide_on_blur)
+                        .unwrap_or(true);
+                    drop(state);
+                    if hide {
+                        let _ = target.hide();
+                    }
+                });
             }
             WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
