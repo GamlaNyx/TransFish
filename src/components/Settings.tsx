@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { AlertIcon, CheckIcon, ChevronLeftIcon, PinIcon } from "./Icons";
 import { TARGET_OPTIONS, langName } from "../lib/lang";
-import { backend, toApiError, type SettingsPatch, type SettingsView } from "../lib/api";
+import { backend, toApiError, type SettingsPatch, type SettingsView, type Theme } from "../lib/api";
 
 interface SettingsProps {
   settings: SettingsView;
@@ -9,7 +9,14 @@ interface SettingsProps {
   onClose: () => void;
   onSaved: (settings: SettingsView) => void;
   onTogglePin: () => void;
+  onThemePreview: (theme: Theme | null) => void;
 }
+
+const THEME_OPTIONS: { value: Theme; label: string }[] = [
+  { value: "light", label: "白" },
+  { value: "dark", label: "黑" },
+  { value: "translucent", label: "半透明" },
+];
 
 type TestState = { ok: boolean; message: string } | null;
 
@@ -55,12 +62,14 @@ export default function Settings({
   onClose,
   onSaved,
   onTogglePin,
+  onThemePreview,
 }: SettingsProps) {
   const [accessKeyId, setAccessKeyId] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [hotkey, setHotkey] = useState(settings.hotkey);
   const [targetMode, setTargetMode] = useState(settings.targetMode);
+  const [theme, setTheme] = useState<Theme>(settings.theme);
   const [hideOnBlur, setHideOnBlur] = useState(settings.hideOnBlur);
   const [clipboardPrefill, setClipboardPrefill] = useState(settings.clipboardPrefill);
   const [quickTranslate, setQuickTranslate] = useState(settings.quickTranslate);
@@ -75,6 +84,7 @@ export default function Settings({
   useEffect(() => {
     setHotkey(settings.hotkey);
     setTargetMode(settings.targetMode);
+    setTheme(settings.theme);
     setHideOnBlur(settings.hideOnBlur);
     setClipboardPrefill(settings.clipboardPrefill);
     setQuickTranslate(settings.quickTranslate);
@@ -82,6 +92,7 @@ export default function Settings({
   }, [
     settings.hotkey,
     settings.targetMode,
+    settings.theme,
     settings.hideOnBlur,
     settings.clipboardPrefill,
     settings.quickTranslate,
@@ -98,6 +109,7 @@ export default function Settings({
     const patch: SettingsPatch = {
       hotkey,
       targetMode,
+      theme,
       hideOnBlur,
       clipboardPrefill,
       quickTranslate,
@@ -264,6 +276,34 @@ export default function Settings({
             </button>
           </div>
           {hotkeyError && <div className="credential-state bad">{hotkeyError}</div>}
+        </div>
+
+        <div className="section-title">外观</div>
+
+        <div className="field">
+          <div className="field-label">
+            <span>主题</span>
+            <span className="field-hint">
+              {theme === "translucent" ? "采样桌面背景" : theme === "dark" ? "纯黑，不透明" : "纯白，不透明"}
+            </span>
+          </div>
+          <div className="segmented" role="radiogroup" aria-label="主题">
+            {THEME_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={theme === option.value}
+                className={`segment${theme === option.value ? " selected" : ""}`}
+                onClick={() => {
+                  setTheme(option.value);
+                  onThemePreview(option.value);
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="section-title">火山引擎</div>

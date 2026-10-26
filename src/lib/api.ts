@@ -1,9 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
+export type Theme = "light" | "dark" | "translucent";
+
 export interface SettingsView {
   hotkey: string;
   targetMode: string;
+  theme: Theme;
   hideOnBlur: boolean;
   clipboardPrefill: boolean;
   quickTranslate: boolean;
@@ -55,6 +58,7 @@ export interface SettingsPatch {
   secretAccessKey?: string;
   hotkey?: string;
   targetMode?: string;
+  theme?: Theme;
   hideOnBlur?: boolean;
   clipboardPrefill?: boolean;
   quickTranslate?: boolean;

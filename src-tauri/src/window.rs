@@ -139,14 +139,20 @@ pub fn summon(app: &AppHandle, read_clipboard: bool) {
 
     let state = app.state::<crate::AppState>();
     let was_visible = window.is_visible().unwrap_or(false);
+    let translucent = state
+        .settings
+        .lock()
+        .map(|s| s.uses_translucent_material())
+        .unwrap_or(true);
 
     place(&window);
 
     // Sample the desktop before the slip covers it, so the glass can pick up
     // the colour and blurred shapes of whatever sits behind it. Read-only;
-    // never touches DWM or window geometry.
+    // never touches DWM or window geometry. Solid light/dark themes skip the
+    // sampling and the backdrop capture.
     let mut backdrop = None;
-    if !was_visible {
+    if !was_visible && translucent {
         let frame = window.outer_position().ok().and_then(|position| {
             let size = window.outer_size().ok()?;
             Some((position, size))
@@ -179,7 +185,11 @@ pub fn summon(app: &AppHandle, read_clipboard: bool) {
     });
 
     let settings = state.settings.lock().map(|s| s.clone()).unwrap_or_default();
-    let ambient = state.ambient.lock().ok().and_then(|value| *value);
+    let ambient = if translucent {
+        state.ambient.lock().ok().and_then(|value| *value)
+    } else {
+        None
+    };
 
     let mut payload = SummonPayload {
         clipboard: None,

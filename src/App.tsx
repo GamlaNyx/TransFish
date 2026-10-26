@@ -10,6 +10,7 @@ import {
   type Bootstrap,
   type SettingsView,
   type SummonPayload,
+  type Theme,
   type Translation,
 } from "./lib/api";
 
@@ -18,6 +19,7 @@ type View = "translate" | "settings";
 const DEMO_SETTINGS: SettingsView = {
   hotkey: "Alt+T",
   targetMode: "auto",
+  theme: "translucent",
   hideOnBlur: true,
   clipboardPrefill: true,
   quickTranslate: true,
@@ -48,6 +50,7 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [backdrop, setBackdrop] = useState<string | null>(null);
   const [summonKey, setSummonKey] = useState(0);
+  const [previewTheme, setPreviewTheme] = useState<Theme | null>(null);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -117,12 +120,11 @@ export default function App() {
   }, [result, showToast]);
 
   const submit = useCallback(() => {
-    if (result && text.trim() === lastText && !loading) {
-      void copyResult();
+    if (loading) {
       return;
     }
     void runTranslate();
-  }, [result, text, lastText, loading, runTranslate, copyResult]);
+  }, [loading, runTranslate]);
 
   const handlePasteText = useCallback(
     (value: string) => {
@@ -160,6 +162,31 @@ export default function App() {
     [],
   );
   summonRef.current = handleSummon;
+
+  const activeTheme: Theme = previewTheme ?? boot?.settings.theme ?? "translucent";
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    root.dataset.theme = activeTheme;
+    const applyTone = () => {
+      const tone =
+        activeTheme === "dark"
+          ? "dark"
+          : activeTheme === "light"
+            ? "light"
+            : media.matches
+              ? "dark"
+              : "light";
+      root.dataset.tone = tone;
+      root.style.colorScheme = tone;
+    };
+    applyTone();
+    if (activeTheme !== "translucent") {
+      return;
+    }
+    media.addEventListener("change", applyTone);
+    return () => media.removeEventListener("change", applyTone);
+  }, [activeTheme]);
 
   const applyDemo = (demo: string | null) => {
     const credentialed = { ...DEMO_SETTINGS, hasCredentials: true };
@@ -315,6 +342,7 @@ export default function App() {
       if (event.key === "Escape") {
         event.preventDefault();
         if (view === "settings") {
+          setPreviewTheme(null);
           setView("translate");
         } else if (isTauri()) {
           void backend.hideWindow().catch(() => undefined);
@@ -323,7 +351,13 @@ export default function App() {
       }
       if ((event.ctrlKey || event.metaKey) && event.key === ",") {
         event.preventDefault();
-        setView((current) => (current === "settings" ? "translate" : "settings"));
+        setView((current) => {
+          if (current === "settings") {
+            setPreviewTheme(null);
+            return "translate";
+          }
+          return "settings";
+        });
         return;
       }
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && view === "translate") {
@@ -338,6 +372,7 @@ export default function App() {
 
   const handleSaved = useCallback(
     (next: SettingsView) => {
+      setPreviewTheme(null);
       setBoot((current) => (current ? { ...current, settings: next, hotkeyError: null } : current));
       setError((current) => (current?.code === "no_credentials" || current?.code === "auth" ? null : current));
       setView("translate");
@@ -394,9 +429,13 @@ export default function App() {
           <Settings
             settings={active}
             version={boot.version}
-            onClose={() => setView("translate")}
+            onClose={() => {
+              setPreviewTheme(null);
+              setView("translate");
+            }}
             onSaved={handleSaved}
             onTogglePin={() => void togglePin()}
+            onThemePreview={setPreviewTheme}
           />
         ) : (
           <Translator

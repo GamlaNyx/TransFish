@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 pub const DEFAULT_HOTKEY: &str = "Alt+T";
+pub const DEFAULT_THEME: &str = "translucent";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -12,6 +13,8 @@ pub struct Settings {
     pub hotkey: String,
     /// "auto" for smart zh↔en direction, otherwise a language code.
     pub target_mode: String,
+    /// Window material: "light", "dark" or "translucent".
+    pub theme: String,
     pub hide_on_blur: bool,
     pub clipboard_prefill: bool,
     pub quick_translate: bool,
@@ -28,6 +31,7 @@ impl Default for Settings {
             secret_access_key: String::new(),
             hotkey: DEFAULT_HOTKEY.to_string(),
             target_mode: "auto".to_string(),
+            theme: DEFAULT_THEME.to_string(),
             hide_on_blur: true,
             clipboard_prefill: true,
             quick_translate: true,
@@ -35,6 +39,14 @@ impl Default for Settings {
             always_on_top: true,
             window_position: None,
         }
+    }
+}
+
+pub fn normalize_theme(value: &str) -> String {
+    match value.trim() {
+        "light" => "light".to_string(),
+        "dark" => "dark".to_string(),
+        _ => DEFAULT_THEME.to_string(),
     }
 }
 
@@ -64,13 +76,19 @@ impl Settings {
         if self.target_mode.is_empty() {
             self.target_mode = "auto".to_string();
         }
+        self.theme = normalize_theme(&self.theme);
         self
+    }
+
+    pub fn uses_translucent_material(&self) -> bool {
+        self.theme == DEFAULT_THEME
     }
 
     pub fn view(&self) -> SettingsView {
         SettingsView {
             hotkey: self.hotkey.clone(),
             target_mode: self.target_mode.clone(),
+            theme: self.theme.clone(),
             hide_on_blur: self.hide_on_blur,
             clipboard_prefill: self.clipboard_prefill,
             quick_translate: self.quick_translate,
@@ -87,6 +105,7 @@ impl Settings {
 pub struct SettingsView {
     pub hotkey: String,
     pub target_mode: String,
+    pub theme: String,
     pub hide_on_blur: bool,
     pub clipboard_prefill: bool,
     pub quick_translate: bool,
@@ -117,6 +136,7 @@ pub struct SettingsPatch {
     pub secret_access_key: Option<String>,
     pub hotkey: Option<String>,
     pub target_mode: Option<String>,
+    pub theme: Option<String>,
     pub hide_on_blur: Option<bool>,
     pub clipboard_prefill: Option<bool>,
     pub quick_translate: Option<bool>,
@@ -139,6 +159,9 @@ impl Settings {
         }
         if let Some(v) = patch.target_mode {
             self.target_mode = v.trim().to_string();
+        }
+        if let Some(v) = patch.theme {
+            self.theme = normalize_theme(&v);
         }
         if let Some(v) = patch.hide_on_blur {
             self.hide_on_blur = v;

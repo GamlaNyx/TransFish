@@ -22,6 +22,7 @@
   --fill-1: rgba(118, 118, 128, 0.12);
   --fill-2: rgba(118, 118, 128, 0.18);
   --fill-3: rgba(118, 118, 128, 0.26);
+  --segment-thumb: rgba(255, 255, 255, 0.92);
 
   --accent: #007aff;
   --accent-press: #0068d9;
@@ -41,14 +42,14 @@
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-tone="dark"] {
     --label: #f5f5f7;
     --label-2: rgba(245, 245, 247, 0.64);
     --label-3: rgba(245, 245, 247, 0.42);
     --fill-1: rgba(235, 235, 245, 0.12);
     --fill-2: rgba(235, 235, 245, 0.18);
     --fill-3: rgba(235, 235, 245, 0.26);
+    --segment-thumb: rgba(99, 99, 102, 0.92);
     --accent: #0a84ff;
     --accent-press: #3d9bff;
     --accent-soft: rgba(10, 132, 255, 0.22);
@@ -56,7 +57,6 @@
     --green: #30d158;
     --orange: #ff9f0a;
     --ambient: 34 34 38;
-  }
 }
 
 * {
@@ -155,8 +155,7 @@ textarea {
     inset 0 0 28px rgba(255, 255, 255, 0.14);
 }
 
-@media (prefers-color-scheme: dark) {
-  .slip {
+:root[data-tone="dark"] .slip {
     background:
       radial-gradient(120% 92% at 20% -12%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 60%),
       radial-gradient(90% 72% at 96% 4%, rgb(var(--ambient) / 0.3), rgba(0, 0, 0, 0) 72%),
@@ -169,11 +168,11 @@ textarea {
       0 2px 8px -4px rgba(0, 0, 0, 0.3);
   }
 
-  .slip::before {
+  :root[data-tone="dark"] .slip::before {
     opacity: 0.32;
   }
 
-  .slip::after {
+  :root[data-tone="dark"] .slip::after {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       inset 0 -1px 0 rgba(255, 255, 255, 0.05),
@@ -181,10 +180,9 @@ textarea {
       inset -1px 0 0 rgba(0, 0, 0, 0.2);
   }
 
-  .switch-ui::after {
+  :root[data-tone="dark"] .switch-ui::after {
     background: #f2f2f7;
   }
-}
 
 .slip-header,
 .content,
@@ -243,18 +241,16 @@ textarea {
     linear-gradient(180deg, rgba(253, 253, 254, 0.76), rgba(247, 247, 250, 0.72));
 }
 
-@media (prefers-color-scheme: dark) {
-  .slip[data-backdrop="sampled"] .glass-tint {
+:root[data-tone="dark"] .slip[data-backdrop="sampled"] .glass-tint {
     background:
       radial-gradient(90% 72% at 96% 4%, rgb(var(--ambient) / 0.26), transparent 72%),
       radial-gradient(120% 92% at 20% -12%, rgba(255, 255, 255, 0.1), transparent 60%),
       linear-gradient(180deg, rgba(44, 44, 48, 0.82), rgba(28, 28, 32, 0.79));
   }
 
-  .glass-backdrop {
+  :root[data-tone="dark"] .glass-backdrop {
     filter: blur(50px) saturate(115%) brightness(0.82);
   }
-}
 
 @keyframes sheen {
   from {
@@ -304,18 +300,25 @@ textarea {
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 27px;
   flex: none;
-  padding: 2px;
-  border-radius: 8px;
-  background: #ffffff;
   object-fit: contain;
-  box-shadow:
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.16);
   user-select: none;
   -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.28));
+}
+
+.brand-mark-on-dark {
+  display: none;
+}
+
+:root[data-tone="dark"] .brand-mark-on-light {
+  display: none;
+}
+
+:root[data-tone="dark"] .brand-mark-on-dark {
+  display: block;
 }
 
 .brand-name {
@@ -780,7 +783,7 @@ kbd {
 .settings-scroll {
   position: relative;
   z-index: 1;
-  max-height: 600px;
+  max-height: 660px;
   overflow-y: auto;
   padding: 0 18px 6px;
   scrollbar-width: thin;
@@ -788,7 +791,7 @@ kbd {
 }
 
 .section-title {
-  margin: 13px 2px 6px;
+  margin: 9px 2px 4px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -921,7 +924,7 @@ select.control {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6.5px 0;
+  padding: 5.5px 0;
   cursor: default;
 }
 
@@ -1066,6 +1069,62 @@ select.control {
   text-align: center;
 }
 
+/* ── Theme variants ───────────────────────────────────────────────────── */
+
+/* Solid black / white themes keep the same layout but drop the sampled
+   desktop layers entirely, so the material reads as an opaque sheet. */
+:root[data-theme="light"] .glass-backdrop,
+:root[data-theme="light"] .glass-tint,
+:root[data-theme="dark"] .glass-backdrop,
+:root[data-theme="dark"] .glass-tint {
+  display: none;
+}
+
+:root[data-theme="light"] .slip {
+  background: linear-gradient(180deg, #fbfbfd, #f2f2f5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-theme="dark"] .slip {
+  background: linear-gradient(180deg, #232326, #161618);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: 11px;
+  background: var(--fill-1);
+}
+
+.segment {
+  appearance: none;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--label-2);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.segment:hover {
+  color: var(--label);
+}
+
+.segment.selected {
+  background: var(--segment-thumb);
+  color: var(--label);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
 /* ── Accessibility ────────────────────────────────────────────────────── */
 
 button:focus-visible,
@@ -1096,6 +1155,18 @@ textarea:focus-visible {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 6px 18px -12px rgba(0, 0, 0, 0.24);
+  }
+
+  :root[data-tone="dark"] .slip {
+    background: #1c1c1e;
+  }
+
+  :root[data-theme="light"] .slip {
+    background: #f7f7fa;
+  }
+
+  :root[data-theme="dark"] .slip {
+    background: #161618;
   }
 
   .slip::before,

@@ -376,13 +376,15 @@ pub fn run() {
                     if graceful {
                         return;
                     }
-                    let hide = state
+                    let (hide, pinned) = state
                         .settings
                         .lock()
-                        .map(|s| s.hide_on_blur)
-                        .unwrap_or(true);
+                        .map(|s| (s.hide_on_blur, s.always_on_top))
+                        .unwrap_or((true, false));
                     drop(state);
-                    if hide {
+                    // A pinned window must survive focus changes so the user can
+                    // keep it beside another app while working.
+                    if hide && !pinned {
                         let _ = target.hide();
                     }
                 });
