@@ -1,6 +1,6 @@
 [package]
 name = "transfish"
-version = "0.1.2"
+version = "0.2.0"
 description = "TransFish — summon-and-translate slip for Windows"
 authors = ["TransFish"]
 edition = "2021"
@@ -29,7 +29,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 thiserror = "2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_UI_Input_KeyboardAndMouse"] }
+windows-sys = { version = "0.61", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi"] }
 
 [profile.release]
 codegen-units = 1

@@ -1,7 +1,7 @@
 {
   "name": "transfish",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "description": "TransFish — a summon-and-translate desktop slip for Windows",
   "scripts": {
@@ -15,7 +15,6 @@
     "icon": "tauri icon"
   },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.3.0",
     "@tauri-apps/api": "^2.9.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.4.0",
     "@tauri-apps/plugin-opener": "^2.5.0",

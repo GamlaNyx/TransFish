@@ -2,6 +2,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 
 mod settings;
+mod backdrop;
 mod tray;
 mod volc;
 mod window;
@@ -26,6 +27,8 @@ pub struct AppState {
     /// Serializes read-modify-write cycles on the settings file.
     pub settings_write: std::sync::Mutex<()>,
     pub position_seq: std::sync::atomic::AtomicU64,
+    /// Average desktop colour sampled under the slip at summon time.
+    pub ambient: std::sync::Mutex<Option<[u8; 3]>>,
 }
 
 #[derive(Serialize)]
@@ -211,7 +214,7 @@ fn set_window_height(app: AppHandle, height: f64) -> Result<(), String> {
         .outer_size()
         .map(|size| size.width as f64 / window.scale_factor().unwrap_or(1.0))
         .unwrap_or(480.0);
-    let height = height.clamp(180.0, 720.0);
+    let height = height.clamp(180.0, 800.0);
     window
         .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
         .map_err(|e| format!("调整窗口高度失败：{e}"))?;
@@ -326,6 +329,7 @@ pub fn run() {
                 last_drag: std::sync::Mutex::new(None),
                 settings_write: std::sync::Mutex::new(()),
                 position_seq: std::sync::atomic::AtomicU64::new(0),
+                ambient: std::sync::Mutex::new(None),
             });
 
             if let Some(window) = app.get_webview_window(window::MAIN) {

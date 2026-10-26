@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { AlertIcon, ArrowLeftIcon, CheckIcon, PinIcon, SealMark } from "./Icons";
+import { AlertIcon, CheckIcon, ChevronLeftIcon, PinIcon } from "./Icons";
 import { TARGET_OPTIONS, langName } from "../lib/lang";
 import { backend, toApiError, type SettingsPatch, type SettingsView } from "../lib/api";
 
@@ -195,8 +195,8 @@ export default function Settings({
   return (
     <>
       <header className="slip-header" data-tauri-drag-region>
-        <button className="icon-btn" onClick={onClose} title="返回 (Esc)" aria-label="返回">
-          <ArrowLeftIcon />
+        <button className="icon-btn back-btn" onClick={onClose} title="返回 (Esc)" aria-label="返回">
+          <ChevronLeftIcon />
         </button>
         <div className="settings-heading" data-tauri-drag-region>
           <h1>设置</h1>
@@ -210,11 +210,8 @@ export default function Settings({
             aria-label={settings.alwaysOnTop ? "取消置顶" : "窗口置顶"}
             aria-pressed={settings.alwaysOnTop}
           >
-            <PinIcon active={settings.alwaysOnTop} />
+            <PinIcon size={17} />
           </button>
-          <span data-tauri-drag-region>
-            <SealMark size={19} />
-          </span>
         </div>
       </header>
 
@@ -274,8 +271,10 @@ export default function Settings({
         <div className="field">
           <div className="field-label">
             <span>AccessKey ID</span>
-            {settings.hasCredentials && settings.accessKeyHint && (
+            {settings.hasCredentials && settings.accessKeyHint ? (
               <span className="field-hint">已保存 {settings.accessKeyHint}</span>
+            ) : (
+              <span className="field-hint">火山引擎控制台 → 密钥管理</span>
             )}
           </div>
           <input
@@ -319,14 +318,10 @@ export default function Settings({
           <button className="btn" type="button" onClick={testConnection} disabled={testing}>
             {testing ? "正在连接…" : "测试连接"}
           </button>
-          {test ? (
+          {test && (
             <div className={`credential-state ${test.ok ? "ok" : "bad"}`}>
               {test.ok ? <CheckIcon size={12} /> : <AlertIcon size={12} />}
               <span>{test.message}</span>
-            </div>
-          ) : (
-            <div className="field-hint" style={{ marginTop: 6 }}>
-              密钥在火山引擎控制台「访问控制 → 密钥管理」创建。
             </div>
           )}
         </div>
@@ -334,42 +329,62 @@ export default function Settings({
         <div className="section-title">习惯</div>
 
         <label className="check">
-          <input type="checkbox" checked={hideOnBlur} onChange={(event) => setHideOnBlur(event.target.checked)} />
           <span className="check-body">
             <span className="check-title">失焦自动收起</span>
             <span className="check-desc">切换到其他窗口时隐藏翻译窗。</span>
           </span>
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={hideOnBlur}
+              onChange={(event) => setHideOnBlur(event.target.checked)}
+            />
+            <span className="switch-ui" aria-hidden />
+          </span>
         </label>
 
         <label className="check">
-          <input
-            type="checkbox"
-            checked={clipboardPrefill}
-            onChange={(event) => setClipboardPrefill(event.target.checked)}
-          />
           <span className="check-body">
             <span className="check-title">用剪贴板预填</span>
             <span className="check-desc">呼出时若剪贴板有新内容，直接填入输入框，按 Enter 翻译。</span>
           </span>
-        </label>
-
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={quickTranslate}
-            onChange={(event) => setQuickTranslate(event.target.checked)}
-          />
-          <span className="check-body">
-            <span className="check-title">粘贴后立刻翻译</span>
-            <span className="check-desc">在输入框粘贴文本时直接翻译，不必按回车。</span>
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={clipboardPrefill}
+              onChange={(event) => setClipboardPrefill(event.target.checked)}
+            />
+            <span className="switch-ui" aria-hidden />
           </span>
         </label>
 
         <label className="check">
-          <input type="checkbox" checked={autostart} onChange={(event) => setAutostart(event.target.checked)} />
+          <span className="check-body">
+            <span className="check-title">粘贴后立刻翻译</span>
+            <span className="check-desc">在输入框粘贴文本时直接翻译，不必按回车。</span>
+          </span>
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={quickTranslate}
+              onChange={(event) => setQuickTranslate(event.target.checked)}
+            />
+            <span className="switch-ui" aria-hidden />
+          </span>
+        </label>
+
+        <label className="check">
           <span className="check-body">
             <span className="check-title">开机自动启动</span>
             <span className="check-desc">登录后在托盘待命，不弹出窗口。</span>
+          </span>
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={autostart}
+              onChange={(event) => setAutostart(event.target.checked)}
+            />
+            <span className="switch-ui" aria-hidden />
           </span>
         </label>
       </div>

@@ -44,6 +44,10 @@ export interface ApiError {
 
 export interface SummonPayload {
   clipboard: string | null;
+  /// Average desktop colour under the slip, sampled right before it is shown.
+  ambient: [number, number, number] | null;
+  /// Downscaled desktop snapshot behind the slip, as a BMP data URL.
+  backdrop: string | null;
 }
 
 export interface SettingsPatch {

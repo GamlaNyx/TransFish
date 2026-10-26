@@ -1,5 +1,4 @@
 import ReactDOM from "react-dom/client";
-import "@fontsource-variable/fraunces";
 import "./styles.css";
 import App from "./App";
 

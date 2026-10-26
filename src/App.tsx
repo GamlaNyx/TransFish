@@ -46,6 +46,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [backdrop, setBackdrop] = useState<string | null>(null);
   const [summonKey, setSummonKey] = useState(0);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -140,6 +141,17 @@ export default function App() {
       setLastText("");
       setCopied(false);
       setSummonKey((key) => key + 1);
+
+      const ambient = payload?.ambient;
+      if (ambient && ambient.length === 3) {
+        document.documentElement.style.setProperty("--ambient", ambient.join(" "));
+        document.documentElement.dataset.ambient = "sampled";
+      } else {
+        document.documentElement.style.removeProperty("--ambient");
+        delete document.documentElement.dataset.ambient;
+      }
+
+      setBackdrop(payload?.backdrop ?? null);
 
       const clipboard = (payload?.clipboard ?? "").trim();
       setText(clipboard);
@@ -369,7 +381,15 @@ export default function App() {
 
   return (
     <div className="appear" key={summonKey} ref={shellRef}>
-      <div className="slip">
+      <div className="slip" data-variant="regular" data-backdrop={backdrop ? "sampled" : "none"}>
+        {backdrop && (
+          <div
+            className="glass-backdrop"
+            style={{ backgroundImage: `url("${backdrop}")` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="glass-tint" aria-hidden="true" />
         {view === "settings" ? (
           <Settings
             settings={active}

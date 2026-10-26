@@ -61,11 +61,63 @@ fn cursor_inside(app: &AppHandle, window: &WebviewWindow) -> bool {
         && cursor.y < (position.y + size.height as i32) as f64
 }
 
+/// Average colour of the desktop underneath the area the slip is about to
+/// cover. This is a read-only GDI sample; no window state is touched.
+#[cfg(target_os = "windows")]
+pub fn sample_ambient(position: PhysicalPosition<i32>, size: PhysicalSize<u32>) -> Option<[u8; 3]> {
+    use windows_sys::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
+
+    let screen = unsafe { GetDC(std::ptr::null_mut()) };
+    if screen.is_null() {
+        return None;
+    }
+
+    let width = size.width as i32;
+    let height = size.height as i32;
+    let mut totals = [0u64; 3];
+    let mut count = 0u64;
+
+    for row in 0..5 {
+        for column in 0..5 {
+            let x = position.x + width * (2 * column + 1) / 10;
+            let y = position.y + height * (2 * row + 1) / 10;
+            let pixel = unsafe { GetPixel(screen, x, y) };
+            if pixel == u32::MAX {
+                continue;
+            }
+            totals[0] += (pixel & 0xff) as u64;
+            totals[1] += ((pixel >> 8) & 0xff) as u64;
+            totals[2] += ((pixel >> 16) & 0xff) as u64;
+            count += 1;
+        }
+    }
+
+    unsafe { ReleaseDC(std::ptr::null_mut(), screen) };
+
+    if count == 0 {
+        return None;
+    }
+    Some([
+        (totals[0] / count) as u8,
+        (totals[1] / count) as u8,
+        (totals[2] / count) as u8,
+    ])
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn sample_ambient(_position: PhysicalPosition<i32>, _size: PhysicalSize<u32>) -> Option<[u8; 3]> {
+    None
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SummonPayload {
     /// Text from the clipboard, only present when it changed since the last summon.
     pub clipboard: Option<String>,
+    /// Average desktop colour under the slip, sampled before it is shown.
+    pub ambient: Option<[u8; 3]>,
+    /// Heavily downscaled snapshot of the desktop behind the slip (BMP data URL).
+    pub backdrop: Option<String>,
 }
 
 pub fn toggle(app: &AppHandle) {
@@ -85,11 +137,36 @@ pub fn summon(app: &AppHandle, read_clipboard: bool) {
         return;
     };
 
+    let state = app.state::<crate::AppState>();
+    let was_visible = window.is_visible().unwrap_or(false);
+
     place(&window);
+
+    // Sample the desktop before the slip covers it, so the glass can pick up
+    // the colour and blurred shapes of whatever sits behind it. Read-only;
+    // never touches DWM or window geometry.
+    let mut backdrop = None;
+    if !was_visible {
+        let frame = window.outer_position().ok().and_then(|position| {
+            let size = window.outer_size().ok()?;
+            Some((position, size))
+        });
+        if let Some((position, size)) = frame {
+            if let Ok(mut ambient) = state.ambient.lock() {
+                *ambient = sample_ambient(position, size);
+            }
+            backdrop = crate::backdrop::capture_data_url(
+                position.x,
+                position.y,
+                size.width,
+                size.height,
+            );
+        }
+    }
+
     let _ = window.show();
     let _ = window.set_focus();
 
-    let state = app.state::<crate::AppState>();
     if let Ok(mut last) = state.last_summon.lock() {
         *last = Some(std::time::Instant::now());
     }
@@ -102,8 +179,13 @@ pub fn summon(app: &AppHandle, read_clipboard: bool) {
     });
 
     let settings = state.settings.lock().map(|s| s.clone()).unwrap_or_default();
+    let ambient = state.ambient.lock().ok().and_then(|value| *value);
 
-    let mut payload = SummonPayload { clipboard: None };
+    let mut payload = SummonPayload {
+        clipboard: None,
+        ambient,
+        backdrop,
+    };
     if read_clipboard && settings.clipboard_prefill {
         if let Ok(text) = app.clipboard().read_text() {
             let trimmed = text.trim();

@@ -1,5 +1,5 @@
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from "react";
-import { AlertIcon, CopyIcon, CheckIcon, GearIcon, GripIcon, PinIcon, SealMark } from "./Icons";
+import { AlertIcon, CopyIcon, CheckIcon, FishMark, PinIcon, SettingsIcon } from "./Icons";
 import { formatLatency, langName, shortLang } from "../lib/lang";
 import type { ApiError, SettingsView, Translation } from "../lib/api";
 
@@ -82,15 +82,9 @@ export default function Translator({
   return (
     <>
       <header className="slip-header" data-tauri-drag-region>
-        <span className="drag-handle" data-tauri-drag-region title="拖动窗口">
-          <GripIcon />
-        </span>
-        <span data-tauri-drag-region>
-          <SealMark />
-        </span>
         <div className="brand" data-tauri-drag-region>
+          <FishMark size={18} className="brand-mark" />
           <span className="brand-name">TransFish</span>
-          <span className="brand-cn">快捷翻译</span>
         </div>
         <div className="header-right">
           <span className="direction" aria-live="polite">
@@ -103,10 +97,10 @@ export default function Translator({
             aria-label={pinned ? "取消置顶" : "窗口置顶"}
             aria-pressed={pinned}
           >
-            <PinIcon active={pinned} />
+            <PinIcon size={17} />
           </button>
           <button className="icon-btn" onClick={onOpenSettings} title="设置 (Ctrl+,)" aria-label="设置">
-            <GearIcon />
+            <SettingsIcon size={18} />
           </button>
         </div>
       </header>
@@ -211,9 +205,6 @@ export default function Translator({
 
         {idle && (
           <div className="empty">
-            <div className="empty-seal" aria-hidden>
-              譯
-            </div>
             <div className="empty-copy">
               <div className="empty-title">
                 {settings && settings.targetMode !== "auto"
