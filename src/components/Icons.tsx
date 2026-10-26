@@ -11,20 +11,6 @@ const stroke = {
   strokeLinejoin: "round" as const,
 };
 
-/** Fish silhouette in the spirit of SF Symbols' `fish.fill`. */
-export function FishMark({ size = 18, className }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        fill="currentColor"
-        d="M21.4 12c-1.9 2.7-4.7 4.3-8 4.3-3 0-5.6-1.1-7.6-3.1l-2.9 2.6a.55.55 0 0 1-.92-.41V8.61a.55.55 0 0 1 .92-.41l2.9 2.6c2-2 4.6-3.1 7.6-3.1 3.3 0 6.1 1.6 8 4.3Zm-4.6-1.35a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3Z"
-      />
-    </svg>
-  );
-}
-
 /** `slider.horizontal.3` — SF Symbols settings glyph. */
 export function SettingsIcon({ size = 18, className }: IconProps) {
   return (

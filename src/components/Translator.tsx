@@ -1,5 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from "react";
-import { AlertIcon, CopyIcon, CheckIcon, FishMark, PinIcon, SettingsIcon } from "./Icons";
+import { AlertIcon, CopyIcon, CheckIcon, PinIcon, SettingsIcon } from "./Icons";
+import logoMark from "../assets/logo-mark.png";
 import { formatLatency, langName, shortLang } from "../lib/lang";
 import type { ApiError, SettingsView, Translation } from "../lib/api";
 
@@ -83,7 +84,7 @@ export default function Translator({
     <>
       <header className="slip-header" data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
-          <FishMark size={18} className="brand-mark" />
+          <img className="brand-mark" src={logoMark} alt="" draggable={false} />
           <span className="brand-name">TransFish</span>
         </div>
         <div className="header-right">

@@ -31,6 +31,9 @@ desktop.ini
 
 # screenshots / scratch
 .shots/
+.icon-work/
+src-tauri/icons/android/
+src-tauri/icons/ios/
 
 # logs
 *.log
