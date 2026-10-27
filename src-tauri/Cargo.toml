@@ -1,6 +1,6 @@
 [package]
 name = "transfish"
-version = "0.2.2"
+version = "0.2.3"
 description = "TransFish — summon-and-translate slip for Windows"
 authors = ["TransFish"]
 edition = "2021"

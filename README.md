@@ -22,7 +22,7 @@
 
 ### 使用安装包
 
-1. 运行 `TransFish_0.2.2_x64-setup.exe`，按提示安装（当前用户，无需管理员）；
+1. 运行 `TransFish_0.2.3_x64-setup.exe`，按提示安装（当前用户，无需管理员）；
 2. 启动后窗口会打开设置页，填入[火山引擎](https://console.volcengine.com/)「访问控制 → 密钥管理」里的 **AccessKey ID** 与 **Secret Access Key**；
 3. 点「测试连接」确认通过，保存；
 4. 随时按 `Alt+T`（或设置里显示的快捷键）呼出。
